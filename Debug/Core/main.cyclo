@@ -1,0 +1,12 @@
+../Core/main.c:85:5:main	2
+../Core/main.c:161:6:SystemClock_Config	4
+../Core/main.c:208:13:MX_ADC1_Init	3
+../Core/main.c:255:13:MX_CAN_Init	2
+../Core/main.c:292:13:MX_I2C1_Init	2
+../Core/main.c:326:13:MX_USART1_UART_Init	2
+../Core/main.c:359:13:MX_USART2_UART_Init	2
+../Core/main.c:392:13:MX_GPIO_Init	1
+../Core/main.c:467:10:GetTemperature	1
+../Core/main.c:482:10:GetTemperature2	1
+../Core/main.c:513:1:__io_putchar	1
+../Core/main.c:527:6:Error_Handler	1
