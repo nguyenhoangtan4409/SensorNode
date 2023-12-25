@@ -73,15 +73,21 @@ typedef struct
 
 
 uint8_t INA219_Init(INA219_t *ina219, I2C_HandleTypeDef *i2c, uint8_t Address);
-uint16_t INA219_ReadBusVoltage_raw(INA219_t *ina219);
-float INA219_ReadBusVoltage_V(INA219_t *ina219);
-uint16_t INA219_ReadShuntVolage_raw(INA219_t *ina219);
-float INA219_ReadShuntVolage_mV(INA219_t *ina219);
-int16_t INA219_ReadCurrent_raw(INA219_t *ina219);
-float INA219_ReadCurrent_mA(INA219_t *ina219);
-int16_t INA219_ReadPower_raw(INA219_t *ina219);
-float INA219_ReadPower_mW(INA219_t *ina219);
 
+uint16_t INA219_ReadBusVoltage_raw(INA219_t *ina219);
+int16_t INA219_ReadBusVoltage_V(INA219_t *ina219);
+
+uint16_t INA219_ReadShuntVolage_raw(INA219_t *ina219);
+int16_t INA219_ReadShuntVolage_mV(INA219_t *ina219);
+
+int16_t INA219_ReadCurrent_raw(INA219_t *ina219);
+int16_t INA219_ReadCurrent_mA(INA219_t *ina219);
+
+int16_t INA219_ReadPower_raw(INA219_t *ina219);
+int16_t INA219_ReadPower_mW(INA219_t *ina219);
+
+uint16_t INA219_ReadBusVoltage(INA219_t *ina219);/////
+uint16_t INA219_ReadShuntVolage(INA219_t *ina219);/////
 void INA219_Reset(INA219_t *ina219);
 void INA219_setCalibration(INA219_t *ina219, uint16_t CalibrationData);
 uint16_t INA219_getConfig(INA219_t *ina219);
@@ -89,6 +95,7 @@ void INA219_setConfig(INA219_t *ina219, uint16_t Config);
 void INA219_setCalibration_32V_2A(INA219_t *ina219);
 void INA219_setCalibration_32V_1A(INA219_t *ina219);
 void INA219_setCalibration_16V_400mA(INA219_t *ina219);
+void INA219_setCalibration_16V_6A(INA219_t *ina219);
 void INA219_setPowerMode(INA219_t *ina219, uint8_t Mode);
 
 uint16_t Read16(INA219_t *ina219, uint8_t Register);
