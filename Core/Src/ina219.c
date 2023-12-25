@@ -9,10 +9,10 @@ int16_t ina219_powerMultiplier_mW;
 uint16_t Read16(INA219_t *ina219, uint8_t Register)
 {
 	uint8_t Value[2];
-
-	HAL_I2C_Mem_Read(ina219->ina219_i2c, (INA219_ADDRESS<<1), Register, 1, Value, 2, 1000);
-
-	return ((Value[0] << 8) | Value[1]);
+	uint16_t temp;
+	HAL_I2C_Mem_Read(ina219->ina219_i2c, (ina219->Address<<1 | 1), Register, 1, Value, 2, 1000);
+	temp = (uint16_t)((Value[0] << 8) | Value[1]);
+	return temp;
 }
 
 
@@ -21,42 +21,69 @@ void Write16(INA219_t *ina219, uint8_t Register, uint16_t Value)
 	uint8_t addr[2];
 	addr[0] = (Value >> 8) & 0xff;  // upper byte
 	addr[1] = (Value >> 0) & 0xff; // lower byte
-	HAL_I2C_Mem_Write(ina219->ina219_i2c, (INA219_ADDRESS<<1), Register, 1, (uint8_t*)addr, 2, 1000);
+	HAL_I2C_Mem_Write(ina219->ina219_i2c, (ina219->Address<<1 | 0), Register, 1, (uint8_t*)addr, 2, 1000);
 }
 
-uint16_t INA219_ReadBusVoltage(INA219_t *ina219)
+uint16_t INA219_ReadBusVoltage_raw(INA219_t *ina219)
 {
-	uint16_t result = Read16(ina219, INA219_REG_BUSVOLTAGE);
+	uint16_t result=Read16(ina219, INA219_REG_BUSVOLTAGE);
+	return result;
+}
+float INA219_ReadBusVoltage_V(INA219_t *ina219)
+{
+	uint16_t result = INA219_ReadBusVoltage_raw(ina219);
+	return result * 0.001;
+}
 
-	return ((result >> 3  ) * 4);
+uint16_t INA219_ReadShuntVolage_raw(INA219_t *ina219)
+{
+	uint16_t result;
+	result = Read16(ina219, INA219_REG_SHUNTVOLTAGE);
+	return result;
+}
 
+float INA219_ReadShuntVolage_mV(INA219_t *ina219)
+{
+	int16_t result = INA219_ReadShuntVolage_raw(ina219);
+	return result * 0.01;
 }
 
 int16_t INA219_ReadCurrent_raw(INA219_t *ina219)
 {
+//	INA219_setCalibration(ina219, ina219_calibrationValue);
+
 	int16_t result = Read16(ina219, INA219_REG_CURRENT);
 
-	return (result );
+	return (result);
 }
 
-int16_t INA219_ReadCurrent(INA219_t *ina219)
+float INA219_ReadCurrent_mA(INA219_t *ina219)
 {
-	int16_t result = INA219_ReadCurrent_raw(ina219);
+	float result = INA219_ReadCurrent_raw(ina219);
+	result /= ina219_currentDivider_mA;
 
-	return (result / ina219_currentDivider_mA );
+	return result;
 }
 
-uint16_t INA219_ReadShuntVolage(INA219_t *ina219)
+int16_t INA219_ReadPower_raw(INA219_t *ina219)
 {
-	uint16_t result = Read16(ina219, INA219_REG_SHUNTVOLTAGE);
+//	INA219_setCalibration(ina219, ina219_calibrationValue);
 
-	return (result * 0.01 );
+	int16_t result = Read16(ina219, INA219_REG_POWER);
+
+	return (result);
+}
+float INA219_ReadPower_mW(INA219_t *ina219)
+{
+	float result = INA219_ReadPower_raw(ina219);
+	result *=  ina219_powerMultiplier_mW;
+	return result;
 }
 
 void INA219_Reset(INA219_t *ina219)
 {
 	Write16(ina219, INA219_REG_CONFIG, INA219_CONFIG_RESET);
-	HAL_Delay(1);
+	HAL_Delay(100);
 }
 
 void INA219_setCalibration(INA219_t *ina219, uint16_t CalibrationData)
@@ -161,7 +188,8 @@ uint8_t INA219_Init(INA219_t *ina219, I2C_HandleTypeDef *i2c, uint8_t Address)
 	{
 
 		INA219_Reset(ina219);
-		INA219_setCalibration_16V_400mA(ina219);
+//		INA219_setCalibration_16V_400mA(ina219);
+		INA219_setCalibration_32V_2A(ina219);
 
 		return 1;
 	}

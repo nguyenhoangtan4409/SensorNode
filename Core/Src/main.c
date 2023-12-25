@@ -17,7 +17,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -48,29 +47,26 @@ CAN_HandleTypeDef hcan;
 
 I2C_HandleTypeDef hi2c1;
 
-SPI_HandleTypeDef hspi1;
-
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t GetTemperature2(void);
+uint32_t GetTemperature_raw(void);
 uint32_t GetTemperature(void);
 
 INA219_t ina219;
 
-uint16_t vbus, vshunt, current;
+float vbus, vshunt, current, power;
+uint16_t busR, read16;
 
-float LMTemp;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
 static void MX_CAN_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_SPI1_Init(void);
+static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -79,7 +75,6 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -110,19 +105,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ADC1_Init();
   MX_CAN_Init();
   MX_I2C1_Init();
-  MX_SPI1_Init();
+  MX_ADC1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   while(!INA219_Init(&ina219, &hi2c1, INA219_ADDRESS))
   {
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+	  HAL_GPIO_WritePin(GPIOB, LEDR_Pin, GPIO_PIN_SET); // off led
   }
-  HAL_ADCEx_Calibration_Start(&hadc1);
+  HAL_GPIO_WritePin(GPIOB, LEDR_Pin, GPIO_PIN_RESET); 	// on Led
+
+//  HAL_ADCEx_Calibration_Start(&hadc1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -132,21 +128,31 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint32_t temp = GetTemperature();
-//	  uint32_t tempRAW = GetTemperature2();
-	  vbus = INA219_ReadBusVoltage(&ina219);
-//	  vshunt = INA219_ReadShuntVolage(&ina219);
-	  current = INA219_ReadCurrent(&ina219);
-	  printf("B: %d\n", vbus);
-//	  printf("S: %d\n", vshunt);
-	  printf("C: %d\n", current);
-//	  printf("T: %ld.%02ld\n", temp / 100, temp % 100);
-//	  printf("T: %ld\n", temp );
-//	  printf("Tr: %d\n", tempRAW );
-	  printf("ADC: %ld\n", temp);
+	  //Read temp
+//	  uint32_t temp = GetTemperature();
+//	  uint32_t tempRAW = GetTemperature_raw();
 
-	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
-	  HAL_Delay(1000);
+	  //Read Vol, Cur, Power
+	  vbus = INA219_ReadBusVoltage_V(&ina219);
+	//	  vshunt = INA219_ReadShuntVolage_mV(&ina219);
+	//	  current = INA219_ReadCurrent_mA(&ina219);
+	//	  power = INA219_ReadPower_mW(&ina219);
+	  busR = INA219_ReadBusVoltage_raw(&ina219);
+	  read16 = Read16(&ina219, INA219_REG_BUSVOLTAGE);
+
+//	  printf("\nC: %.02f\n", current);
+	  printf("Vb: %.02f\n", vbus);
+//	  printf("Vs: %.02f\n", vshunt);
+//	  printf("P: %.02f\n", power);
+	  if (busR == 0) HAL_GPIO_TogglePin(GPIOB, LEDG_Pin);
+	  printf("BusR: %u\n", busR);
+//	  printf("16: %u\n", read16);
+
+//	  printf("T: %ld.%02ld\n", temp / 100, temp % 100);
+//	  printf("T: %ld", temp);
+//	  printf("Tr: %ld\n", tempRAW);
+	  HAL_GPIO_TogglePin(GPIOB, LEDB_Pin);
+	  HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
@@ -164,10 +170,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -177,17 +186,17 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV2;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -228,7 +237,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -313,44 +322,6 @@ static void MX_I2C1_Init(void)
 }
 
 /**
-  * @brief SPI1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI1_Init(void)
-{
-
-  /* USER CODE BEGIN SPI1_Init 0 */
-
-  /* USER CODE END SPI1_Init 0 */
-
-  /* USER CODE BEGIN SPI1_Init 1 */
-
-  /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI1_Init 2 */
-
-  /* USER CODE END SPI1_Init 2 */
-
-}
-
-/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -429,6 +400,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
@@ -436,7 +408,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(XSHUT_MCU1_0_GPIO_Port, XSHUT_MCU1_0_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LEDB_Pin|LEDG_Pin|LEDR_Pin|GPIO_PIN_3, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, LEDB_Pin|LEDG_Pin|LEDR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, MPU_BOOT_Pin|MPU_RST_Pin|XSHUT_MCU1_1_Pin, GPIO_PIN_RESET);
@@ -463,19 +435,24 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LEDB_Pin LEDG_Pin LEDR_Pin MPU_BOOT_Pin
-                           MPU_RST_Pin PB3 XSHUT_MCU1_1_Pin */
-  GPIO_InitStruct.Pin = LEDB_Pin|LEDG_Pin|LEDR_Pin|MPU_BOOT_Pin
-                          |MPU_RST_Pin|GPIO_PIN_3|XSHUT_MCU1_1_Pin;
+  /*Configure GPIO pins : LEDB_Pin LEDG_Pin LEDR_Pin */
+  GPIO_InitStruct.Pin = LEDB_Pin|LEDG_Pin|LEDR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MPU_INT_Pin GPIO1_MCU1_1_Pin */
   GPIO_InitStruct.Pin = MPU_INT_Pin|GPIO1_MCU1_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : MPU_BOOT_Pin MPU_RST_Pin XSHUT_MCU1_1_Pin */
+  GPIO_InitStruct.Pin = MPU_BOOT_Pin|MPU_RST_Pin|XSHUT_MCU1_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SPI_CS_Pin */
@@ -499,18 +476,18 @@ uint32_t GetTemperature(void)
   ADC_val = HAL_ADC_GetValue(&hadc1);
   HAL_ADC_Stop(&hadc1);
 
-  uint32_t temp = (ADC_val * 3.3 * 100) / 4095;
-//  uint32_t temp_decimal = ((ADC_val * 250) % 511) * 100 / 511;
+  uint32_t temp = (ADC_val * 5 * 100) / 4095;
+  uint32_t temp_decimal = ((ADC_val * 5) % 4095) * 100 / 4095;
 
-//  uint32_t temperature = temp * 100 + temp_decimal;
-  return temp;
+  uint32_t temperature = temp * 100 + temp_decimal;
+  return temperature;
 }
-uint32_t GetTemperature2(void)
+uint32_t GetTemperature_raw(void)
 {
 	uint32_t ADC_val;
 
   HAL_ADC_Start(&hadc1);
-  HAL_ADC_PollForConversion(&hadc1, 100);
+  HAL_ADC_PollForConversion(&hadc1, 2000);
   ADC_val = HAL_ADC_GetValue(&hadc1);
   HAL_ADC_Stop(&hadc1);
 

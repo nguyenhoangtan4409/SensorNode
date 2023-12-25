@@ -61,8 +61,8 @@ void Error_Handler(void);
 #define GPIO1_MCU1_0_GPIO_Port GPIOC
 #define XSHUT_MCU1_0_Pin GPIO_PIN_15
 #define XSHUT_MCU1_0_GPIO_Port GPIOC
-#define ADC_TEMPT_Pin GPIO_PIN_4
-#define ADC_TEMPT_GPIO_Port GPIOA
+#define ADC1_TEMP_Pin GPIO_PIN_0
+#define ADC1_TEMP_GPIO_Port GPIOA
 #define BTN2_Pin GPIO_PIN_0
 #define BTN2_GPIO_Port GPIOB
 #define BTN1_Pin GPIO_PIN_1
