@@ -26,56 +26,45 @@ void Write16(INA219_t *ina219, uint8_t Register, uint16_t Value)
 
 uint16_t INA219_ReadBusVoltage_raw(INA219_t *ina219)
 {
-	uint16_t result=Read16(ina219, INA219_REG_BUSVOLTAGE);
+	uint16_t result = Read16(ina219, INA219_REG_BUSVOLTAGE);
 	return result;
 }
-float INA219_ReadBusVoltage_V(INA219_t *ina219)
-{
-	uint16_t result = INA219_ReadBusVoltage_raw(ina219);
-	return result * 0.001;
-}
-
 uint16_t INA219_ReadShuntVolage_raw(INA219_t *ina219)
 {
-	uint16_t result;
-	result = Read16(ina219, INA219_REG_SHUNTVOLTAGE);
+	uint16_t result = Read16(ina219, INA219_REG_SHUNTVOLTAGE);
 	return result;
 }
+int16_t INA219_ReadCurrent_raw(INA219_t *ina219)
+{
+	int16_t result = Read16(ina219, INA219_REG_CURRENT);
+	return (result);
+}
+int16_t INA219_ReadPower_raw(INA219_t *ina219)
+{
+	int16_t result = Read16(ina219, INA219_REG_POWER);
+	return (result);
+}
+uint16_t INA219_ReadBusVoltage_mV(INA219_t *ina219)
+{
+	uint16_t result = INA219_ReadBusVoltage_raw(ina219);
+	return ((result >> 3) * 4);
+}
 
-float INA219_ReadShuntVolage_mV(INA219_t *ina219)
+uint16_t INA219_ReadShuntVolage_mV(INA219_t *ina219)
 {
 	int16_t result = INA219_ReadShuntVolage_raw(ina219);
 	return result * 0.01;
 }
 
-int16_t INA219_ReadCurrent_raw(INA219_t *ina219)
+int16_t INA219_ReadCurrent_mA(INA219_t *ina219)
 {
-//	INA219_setCalibration(ina219, ina219_calibrationValue);
-
-	int16_t result = Read16(ina219, INA219_REG_CURRENT);
-
-	return (result);
-}
-
-float INA219_ReadCurrent_mA(INA219_t *ina219)
-{
-	float result = INA219_ReadCurrent_raw(ina219);
+	int16_t result = INA219_ReadCurrent_raw(ina219);
 	result /= ina219_currentDivider_mA;
-
 	return result;
 }
-
-int16_t INA219_ReadPower_raw(INA219_t *ina219)
+int16_t INA219_ReadPower_mW(INA219_t *ina219)
 {
-//	INA219_setCalibration(ina219, ina219_calibrationValue);
-
-	int16_t result = Read16(ina219, INA219_REG_POWER);
-
-	return (result);
-}
-float INA219_ReadPower_mW(INA219_t *ina219)
-{
-	float result = INA219_ReadPower_raw(ina219);
+	int16_t result = INA219_ReadPower_raw(ina219);
 	result *=  ina219_powerMultiplier_mW;
 	return result;
 }
@@ -146,6 +135,20 @@ void INA219_setCalibration_16V_400mA(INA219_t *ina219)
 	INA219_setCalibration(ina219, ina219_calibrationValue);
 	INA219_setConfig(ina219, config);
 }
+void INA219_setCalibration_16V_6A(INA219_t *ina219)
+{
+	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_16V |
+	                    INA219_CONFIG_GAIN_1_40MV | INA219_CONFIG_BADCRES_12BIT |
+	                    INA219_CONFIG_SADCRES_12BIT_1S_532US |
+	                    INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
+
+	ina219_calibrationValue = 4096;
+	ina219_currentDivider_mA = 5;    // Current LSB = 200uA per bit (1000/200 = 5)
+	ina219_powerMultiplier_mW = 4.0f; // Power LSB = 4mW per bit
+
+	INA219_setCalibration(ina219, ina219_calibrationValue);
+	INA219_setConfig(ina219, config);
+}
 
 void INA219_setPowerMode(INA219_t *ina219, uint8_t Mode)
 {
@@ -188,8 +191,7 @@ uint8_t INA219_Init(INA219_t *ina219, I2C_HandleTypeDef *i2c, uint8_t Address)
 	{
 
 		INA219_Reset(ina219);
-//		INA219_setCalibration_16V_400mA(ina219);
-		INA219_setCalibration_32V_2A(ina219);
+		INA219_setCalibration_16V_6A(ina219);
 
 		return 1;
 	}
