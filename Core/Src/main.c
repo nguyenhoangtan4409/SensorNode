@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "ina219.h"
 #include <stdbool.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,6 +62,7 @@ int16_t uvbus, uvshunt, ucurrent, upower;
 
 bool isPrint = false;
 
+bool isPrint = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,7 +73,16 @@ static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+ if(htim->Instance == htim2.Instance)
+ {
+   HAL_GPIO_TogglePin(GPIOB, LEDG_Pin);
+   isPrint = true;
+ }
+}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
  if(htim->Instance == htim2.Instance)
@@ -118,6 +129,7 @@ int main(void)
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_TIM2_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   while(!INA219_Init(&ina219, &hi2c1, INA219_ADDRESS))
@@ -233,7 +245,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -407,10 +419,32 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(XSHUT_MCU1_0_GPIO_Port, XSHUT_MCU1_0_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LEDB_Pin|LEDG_Pin|LEDR_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : BTN1_Pin */
-  GPIO_InitStruct.Pin = BTN1_Pin;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, MPU_BOOT_Pin|MPU_RST_Pin|XSHUT_MCU1_1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : GPIO1_MCU1_0_Pin */
+  GPIO_InitStruct.Pin = GPIO1_MCU1_0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIO1_MCU1_0_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : XSHUT_MCU1_0_Pin */
+  GPIO_InitStruct.Pin = XSHUT_MCU1_0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(XSHUT_MCU1_0_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN2_Pin BTN1_Pin */
+  GPIO_InitStruct.Pin = BTN2_Pin|BTN1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BTN1_GPIO_Port, &GPIO_InitStruct);
@@ -435,6 +469,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 uint32_t GetTemperature(void)
 {
+	uint32_t ADC_val = GetTemperature_raw();
 	uint32_t ADC_val = GetTemperature_raw();
 
   uint32_t temp = (ADC_val * 5 * 100) / 4095;

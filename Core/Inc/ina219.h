@@ -69,6 +69,7 @@ typedef struct
 
 uint8_t INA219_Init(INA219_t *ina219, I2C_HandleTypeDef *i2c, uint8_t Address);
 
+
 uint16_t INA219_ReadBusVoltage_raw(INA219_t *ina219);
 uint16_t INA219_ReadBusVoltage_mV(INA219_t *ina219);
 
@@ -81,6 +82,8 @@ int16_t INA219_ReadCurrent_mA(INA219_t *ina219);
 int16_t INA219_ReadPower_raw(INA219_t *ina219);
 int16_t INA219_ReadPower_mW(INA219_t *ina219);
 
+uint16_t INA219_ReadBusVoltage(INA219_t *ina219);/////
+uint16_t INA219_ReadShuntVolage(INA219_t *ina219);/////
 void INA219_Reset(INA219_t *ina219);
 void INA219_setCalibration(INA219_t *ina219, uint16_t CalibrationData);
 uint16_t INA219_getConfig(INA219_t *ina219);
